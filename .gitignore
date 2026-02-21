@@ -1,0 +1,9 @@
+VLTSeg
+sam2
+runs
+Grounded-SAM-2
+data
+cache
+_pycache_
+checkpoints
+logs
