@@ -86,6 +86,12 @@ class DualHeadSiameseSegFormer(nn.Module):
         self.dec_cls = SegFormerDecoderHead(dims, decoder_dim, num_classes=num_damage_classes)
 
     def forward(self, pre, post):
+        pre = pre.contiguous()
+        post = post.contiguous()
+
+        # Encode
+        out_pre = self.encoder(pre).hidden_states
+        out_post = self.encoder(post).hidden_states
         # Encode
         out_pre = self.encoder(pre).hidden_states
         out_post = self.encoder(post).hidden_states

@@ -95,9 +95,9 @@ def setup_devices_autodetect():
         world_size = env_world
     else:
         for k in ("LOCAL_RANK","RANK","WORLD_SIZE","MASTER_ADDR","MASTER_PORT",
-                  "SLURM_PROCID","SLURM_NTASKS","PMI_RANK","PMI_SIZE","ACCELERATE_USE_DISTRIBUTED"):
+                  "SLURM_PROCID","SLURM_NTASKS","PMI_RANK","PMI_SIZE"):
             os.environ.pop(k, None)
-        os.environ["ACCELERATE_USE_DISTRIBUTED"] = "false"
+            
         if torch.cuda.is_available() and gpu_count > 0:
             torch.cuda.set_device(0)
         mode = "single"

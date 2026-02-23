@@ -1,12 +1,12 @@
-data_root = "/data/CRASAR-tiles"
-output_dir = "/working/runs/segformer_crarsar"
+data_root = "data/CRASAR-tiles"
+output_dir = "runs/segformer_crarsar"
 model_name = "nvidia/segformer-b2-finetuned-ade-512-512"
 epochs = 300
 num_classes = 6
 train_split = "train"
 val_split = "test"
 test_split = "test"
-batch_size = 2
+batch_size = 12
 fp16=True
 ignore_index = 0
 
