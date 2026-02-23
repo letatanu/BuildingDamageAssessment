@@ -210,21 +210,44 @@ def process_one_scene(args):
                         r_mask = rasterize([(g, 1) for g in buckets[cls]], out_shape=(th, tw), fill=0, dtype="uint8")
                         mask[r_mask == 1] = cls
                 
-                # Save Data
+                # --- XBD FORMATTING ENHANCEMENTS ---
+                base_name = filename.replace(".tif", "")
+                
                 with counter_lock.get_lock():
                     curr_id = counter_lock.value
                     counter_lock.value += 1
                 
                 saved_local += 1
                 
-                Image.fromarray(np.moveaxis(rgb, 0, -1).astype(np.uint8)).save(paths["img"] / f"{curr_id}.png")
-                Image.fromarray(mask).save(paths["lab"] / f"{curr_id}_lab.png")
+                # Naming format: hurricane-harvey_00000064_crop_0 (etc)
+                tile_name = f"{base_name}_crop_{curr_id}"
                 
-                vis = np.zeros((th, tw, 3), dtype=np.uint8)
-                for cls, col in COLOR_RGB.items(): vis[mask == cls] = col
-                Image.fromarray(vis).save(paths["vis"] / f"{curr_id}_vis.png")
+                # Convert Rasterio RGB to PIL
+                img_rgb = np.moveaxis(rgb, 0, -1).astype(np.uint8)
+                
+                # 1. Save RGB Image as JPG (Quality 100 avoids artifacting)
+                img_out_path = paths["img"] / f"{tile_name}.jpg"
+                Image.fromarray(img_rgb).save(img_out_path, format="JPEG", quality=100)
+                
+                # 2. Save Semantic Mask as PNG
+                lbl_out_path = paths["lab"] / f"{tile_name}_lab.png"
+                Image.fromarray(mask).save(lbl_out_path, format="PNG")
+                
+                # 3. Save xBD Alpha-Blended Visualization as JPG
+                vis_out_path = paths["vis"] / f"{tile_name}_vis.jpg"
+                
+                vis = img_rgb.copy().astype(np.float32)
+                mask_rgb = np.zeros((th, tw, 3), dtype=np.float32)
+                for cls, col in COLOR_RGB.items(): 
+                    if cls == 0 or cls == 255: continue
+                    mask_rgb[mask == cls] = col
+                
+                alpha = 0.5
+                mask_pixels = mask > 0
+                vis[mask_pixels] = (vis[mask_pixels] * (1 - alpha)) + (mask_rgb[mask_pixels] * alpha)
+                Image.fromarray(vis.astype(np.uint8)).save(vis_out_path, format="JPEG", quality=90)
 
-                # DEM
+                # 4. Save DEM if present (using original 'win' logic from CRASAR script)
                 if src_dem:
                     d = src_dem.read(
                         1, 
@@ -234,13 +257,23 @@ def process_one_scene(args):
                         out_shape=(th, tw), 
                         resampling=Resampling.bilinear
                     )
-                    meta = src_dem.meta.copy()
-                    win_transform = rasterio.windows.transform(win, src_dem.transform)
-                    new_transform = win_transform * win_transform.scale(zoom, zoom)
-                    meta.update(height=th, width=tw, transform=new_transform) 
                     
-                    with rasterio.open(paths["dem"] / f"{curr_id}_dem.tif", "w", **meta) as dst: 
+                    meta = src_dem.meta.copy()
+                    # Ensure metadata matches the actual cropped size
+                    meta.update({
+                        "height": th, 
+                        "width": tw, 
+                        "count": 1, 
+                        "dtype": str(d.dtype)
+                    })
+                    
+                    # Update geotransform for the cropped window
+                    win_transform = rasterio.windows.transform(win, src_dem.transform)
+                    meta.update({"transform": win_transform})
+                    
+                    with rasterio.open(paths["dem"] / f"{tile_name}_dem.tif", "w", **meta) as dst: 
                         dst.write(d, 1)
+
             
             if src_dem: src_dem.close()
 
@@ -270,7 +303,13 @@ def main():
     dem_dir = root / "dem" / args.split / "imagery" / "UAS"
     
     out = Path(args.out_dir) / args.split
-    paths = {k: out/v for k,v in [("img",f"{args.split}-org-img"), ("lab",f"{args.split}-label-img"), ("dem",f"{args.split}-dem"), ("vis","colored-annotations")]}
+    paths = {k: out/v for k,v in [
+        ("img", f"{args.split}-org-img"), 
+        ("lab", f"{args.split}-label-img"), 
+        ("dem", f"{args.split}-dem"), 
+        ("vis", f"{args.split}-label-vis")  
+    ]}
+    
     for p in paths.values(): ensure_dir(p)
 
     # --- FILTERING FILES ---

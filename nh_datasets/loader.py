@@ -1,5 +1,5 @@
 import runpy, inspect, importlib
-from datasets.registry import DATASET_REGISTRY
+from nh_datasets.registry import DATASET_REGISTRY
 
 # ensure modules are imported so registration runs
 importlib.import_module("nh_datasets.floodnet")

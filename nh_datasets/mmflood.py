@@ -15,7 +15,7 @@ from transformers import (
 )
 
 from .registry import register_dataset
-from datasets.floodnet import FloodNetSegDataset, FloodNetMask2FormerDataset
+from nh_datasets.floodnet import FloodNetSegDataset, FloodNetMask2FormerDataset
 
 # -----------------------
 # Dataset (semantic → class/mask + semantic GT for metrics)
