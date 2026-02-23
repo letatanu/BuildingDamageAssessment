@@ -94,12 +94,10 @@ def setup_devices_autodetect():
         mode = "ddp"
         world_size = env_world
     else:
-        # DO NOT hardcode ACCELERATE_USE_DISTRIBUTED="false" as it can confuse 
-        # Trainer into thinking no GPU is available if DataParallel is intended.
         for k in ("LOCAL_RANK","RANK","WORLD_SIZE","MASTER_ADDR","MASTER_PORT",
-                  "SLURM_PROCID","SLURM_NTASKS","PMI_RANK","PMI_SIZE"):
+                  "SLURM_PROCID","SLURM_NTASKS","PMI_RANK","PMI_SIZE","ACCELERATE_USE_DISTRIBUTED"):
             os.environ.pop(k, None)
-        
+        os.environ["ACCELERATE_USE_DISTRIBUTED"] = "false"
         if torch.cuda.is_available() and gpu_count > 0:
             torch.cuda.set_device(0)
         mode = "single"
